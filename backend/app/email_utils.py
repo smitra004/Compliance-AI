@@ -1,12 +1,12 @@
-"""Real SMTP email delivery — currently only used for password reset.
+"""
+Real SMTP email delivery — currently only used for password reset.
 
 Config-driven like every other optional integration in this app (Azure
 OpenAI, Azure AI Search, Purview, Postgres, Redis...): if SMTP_HOST/
 SMTP_USER/SMTP_PASSWORD aren't set, `send_email` returns False rather
-than pretending to have sent anything. Callers are expected to fall back
-to an honest demo-mode message in that case (see
-main.py::forgot_password).
+than pretending to have sent anything.
 """
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
@@ -15,9 +15,10 @@ from app import config
 
 
 def send_email(to_address: str, subject: str, body: str) -> bool:
-    """Send a plain-text email over real SMTP. Returns True only if the
-    message was actually handed off to the SMTP server successfully."""
+    """Send a plain-text email over SMTP."""
+
     if not config.SMTP_CONFIGURED or not to_address:
+        print("SMTP NOT CONFIGURED")
         return False
 
     msg = MIMEMultipart()
@@ -27,22 +28,49 @@ def send_email(to_address: str, subject: str, body: str) -> bool:
     msg.attach(MIMEText(body, "plain"))
 
     try:
-        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=10) as server:
+        print("=" * 60)
+        print("SMTP HOST :", config.SMTP_HOST)
+        print("SMTP PORT :", config.SMTP_PORT)
+        print("SMTP USER :", config.SMTP_USER)
+        print("SMTP FROM :", config.SMTP_FROM)
+        print("=" * 60)
+
+        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=20) as server:
+            server.set_debuglevel(1)
+
+            server.ehlo()
+
             server.starttls()
-            server.login(config.SMTP_USER, config.SMTP_PASSWORD)
-            result = server.sendmail(
-		    msg["From"],
-		    [to_address],
-	   	 msg.as_string()
-	    )
 
-	    print("SMTP RESULT:", result)
+            server.ehlo()
 
-	    print(server.noop())
+            login_result = server.login(
+                config.SMTP_USER,
+                config.SMTP_PASSWORD
+            )
+
+            print("LOGIN RESULT:", login_result)
+
+            send_result = server.sendmail(
+                msg["From"],
+                [to_address],
+                msg.as_string()
+            )
+
+            print("SEND RESULT:", send_result)
+            print("NOOP:", server.noop())
+
+        print("EMAIL SENT SUCCESSFULLY")
         return True
+
     except Exception as e:
-        print(f"[email] Failed to send to {to_address}: {e}")
+        print("=" * 60)
+        print("SMTP ERROR")
+        print(type(e))
+        print(e)
+        print("=" * 60)
         return False
+
 
 def send_otp_email(email: str, otp: str) -> bool:
     subject = "ComplianceAI - Email Verification OTP"
