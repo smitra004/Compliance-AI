@@ -36,9 +36,9 @@ def send_email(to_address: str, subject: str, body: str) -> bool:
 	   	 msg.as_string()
 	    )
 
-	print("SMTP RESULT:", result)
+	    print("SMTP RESULT:", result)
 
-	print(server.noop())
+	    print(server.noop())
         return True
     except Exception as e:
         print(f"[email] Failed to send to {to_address}: {e}")
