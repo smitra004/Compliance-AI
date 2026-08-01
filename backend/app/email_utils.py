@@ -31,10 +31,10 @@ def send_email(to_address: str, subject: str, body: str) -> bool:
             server.starttls()
             server.login(config.SMTP_USER, config.SMTP_PASSWORD)
             result = server.sendmail(
-	    msg["From"],
-	    [to_address],
-	    msg.as_string()
-	)
+		    msg["From"],
+		    [to_address],
+	   	 msg.as_string()
+	    )
 
 	print("SMTP RESULT:", result)
 
