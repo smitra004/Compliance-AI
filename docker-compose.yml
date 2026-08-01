@@ -3,12 +3,13 @@
 # Redis, Keycloak, Prometheus and Grafana all come up, but the backend keeps
 # working (SQLite + in-memory cache + header-based RBAC) even if you delete
 # any of those services, per the project's existing demo-mode philosophy.
+
 services:
   backend:
     build: ./backend
-    env_file:
-     - backend/.env
-    ports: ["8010:8000"]  # host:container — 8010 used on host to avoid Windows WinError 10013 on port 8000
+    restart: unless-stopped
+    ports:
+      - "8010:8000"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
@@ -26,26 +27,47 @@ services:
       - OIDC_AUDIENCE=${OIDC_AUDIENCE:-}
       - JWT_SECRET=${JWT_SECRET:-dev-only-insecure-secret-change-me}
       - ORCHESTRATOR_ENGINE=${ORCHESTRATOR_ENGINE:-native}
-    depends_on: [postgres, redis]
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
+    depends_on:
+      - postgres
+      - redis
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
+        ]
       interval: 15s
       timeout: 5s
       retries: 5
 
   frontend:
     build: ./frontend
-    ports: ["8080:80"]
-    depends_on: [backend]
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=complianceai
       - POSTGRES_PASSWORD=complianceai
       - POSTGRES_DB=complianceai
-    ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U complianceai"]
       interval: 10s
@@ -54,7 +76,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -63,33 +87,44 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
+    restart: unless-stopped
     command: start-dev
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - KC_DB=dev-file
-    ports: ["8080:8080"]
-    profiles: ["auth"]   # `docker compose --profile auth up` to include it
+    ports:
+      - "8081:8080"
+    profiles:
+      - auth
 
   prometheus:
     image: prom/prometheus:v2.54.1
+    restart: unless-stopped
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports: ["9090:9090"]
-    depends_on: [backend]
-    profiles: ["observability"]
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+    profiles:
+      - observability
 
   grafana:
     image: grafana/grafana:11.2.0
-    ports: ["3000:3000"]
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_ANONYMOUS_ENABLED=true
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    depends_on: [prometheus]
-    profiles: ["observability"]
+    depends_on:
+      - prometheus
+    profiles:
+      - observability
 
 volumes:
   pgdata:
