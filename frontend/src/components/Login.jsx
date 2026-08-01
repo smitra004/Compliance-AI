@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ShieldCheck, Mail, Lock, LogIn, KeyRound, ArrowLeft, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
 
-const BASE = "/api";
+const BASE = "http://54.236.18.217:8010";
 
 // Matches the ivory / antique-gold brand palette used across the rest of
 // the app (see AppFull.jsx `CAP`), kept local here since the login screen
