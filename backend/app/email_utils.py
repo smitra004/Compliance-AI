@@ -30,7 +30,15 @@ def send_email(to_address: str, subject: str, body: str) -> bool:
         with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=10) as server:
             server.starttls()
             server.login(config.SMTP_USER, config.SMTP_PASSWORD)
-            server.sendmail(msg["From"], [to_address], msg.as_string())
+            result = server.sendmail(
+	    msg["From"],
+	    [to_address],
+	    msg.as_string()
+	)
+
+	print("SMTP RESULT:", result)
+
+	print(server.noop())
         return True
     except Exception as e:
         print(f"[email] Failed to send to {to_address}: {e}")
