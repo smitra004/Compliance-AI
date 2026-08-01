@@ -1,0 +1,20 @@
+[
+  {
+    "policy_id": "OPS-001",
+    "name": "Operations Standard Workflow",
+    "description": "Allows Operations team members to perform standard operational scans and dashboard analytics.",
+    "effect": "Permit",
+    "priority": 40,
+    "roles": ["central_admin", "admin", "manager", "auditor"],
+    "departments": ["Operations", "General"],
+    "resource": {
+      "department": ["Operations", "General"],
+      "classification": ["Public", "Internal"]
+    },
+    "actions": ["Read", "Upload", "Run AI Analysis", "View Dashboard"],
+    "conditions": {
+      "max_risk_score": 70
+    },
+    "obligations": []
+  }
+]

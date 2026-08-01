@@ -1,0 +1,16 @@
+# Internal Data & Security Policy Corpus
+# Each block: CLAUSE || regulation || severity_weight || text
+
+INT-SEC-01 - Data Classification || internal_security || P3 || All documents must carry a data classification label (Public, Internal, Confidential, Restricted). Documents without a classification label deviate from policy.
+
+INT-SEC-02 - Credential Handling || internal_security || P1 || Passwords, API keys, access tokens and secrets must never appear in plain text inside documents, emails, or source files. Hard-coded credentials are a critical violation.
+
+INT-SEC-03 - Encryption in Transit || internal_security || P2 || Confidential information must only be shared over encrypted channels. Sharing confidential data over unencrypted email or links violates this policy.
+
+INT-SEC-04 - Access Control || internal_security || P2 || Access to restricted information must follow least-privilege. Granting broad or unrestricted access to sensitive resources is a violation.
+
+INT-HR-01 - Compensation Confidentiality || internal_hr || P2 || Employee salary, compensation and performance review data is confidential and must not be circulated in shared or unredacted documents.
+
+INT-HR-02 - PII Handling || internal_hr || P2 || Personally identifiable information of employees (national ID, bank account, home address) must be redacted in documents shared beyond HR.
+
+INT-SEC-05 - Data Retention || internal_security || P3 || Internal records must follow the approved retention schedule. Indefinite retention without a retention statement deviates from policy.

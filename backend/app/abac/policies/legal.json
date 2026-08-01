@@ -1,0 +1,21 @@
+[
+  {
+    "policy_id": "LEG-001",
+    "name": "Legal Regulatory & Subpoena Governance",
+    "description": "Allows Legal department to review and export regulatory compliance material (GDPR, SOX, ISO27001).",
+    "effect": "Permit",
+    "priority": 60,
+    "roles": ["central_admin", "admin", "manager", "auditor"],
+    "departments": ["Legal", "Executive"],
+    "resource": {
+      "regulation": ["gdpr", "sox", "iso27001", "custom"]
+    },
+    "actions": ["Read", "Download", "Export", "Approve", "Reject", "View Audit Logs"],
+    "conditions": {
+      "min_clearance": "confidential",
+      "vpn_required": true,
+      "max_risk_score": 65
+    },
+    "obligations": ["Watermark PDF"]
+  }
+]

@@ -1,0 +1,14 @@
+Incident Response Plan
+
+This document belongs to the Security department.
+
+Internal use only.
+Confidential information must not be shared externally.
+The policy shall be reviewed every year.
+Approval is required before implementation.
+Confidential information must not be shared externally.
+This report contains organization specific information.
+Confidential information must not be shared externally.
+Approval is required before implementation.
+Version 2.1 of the document is currently active.
+Management approval is mandatory.

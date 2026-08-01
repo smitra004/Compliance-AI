@@ -1,0 +1,14 @@
+SUBJECT: Customer Data Export - Q2
+
+Team, please export the full customer list and send it to our partner.
+The file contains names, emails like john.doe@acme.com and priya.sharma@acme.com,
+and phone numbers such as +1 415-555-0199.
+
+Database credentials for the export job:
+  DB_PASSWORD = SuperSecret#2024
+  api_key = sk-live-9f8a7b6c5d4e3f2a1b0c
+
+Please upload the export to our US servers and retain the records permanently.
+Grant access to everyone in the partner organisation.
+Salary review: increase annual compensation to $145,000 for the team lead.
+Send this over the unencrypted email thread.

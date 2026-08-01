@@ -1,0 +1,27 @@
+# Environment
+.env
+.env.*
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Generated data
+backend/data/
+backend/uploads/
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/

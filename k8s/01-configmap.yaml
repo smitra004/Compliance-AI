@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: complianceai-config
+  namespace: complianceai
+data:
+  DATABASE_URL: "postgresql+psycopg2://complianceai:complianceai@postgres:5432/complianceai"
+  REDIS_URL: "redis://redis:6379/0"
+  ORCHESTRATOR_ENGINE: "langgraph"
+  AZURE_OPENAI_DEPLOYMENT: "gpt-4o"
+  PROMETHEUS_ENABLED: "true"

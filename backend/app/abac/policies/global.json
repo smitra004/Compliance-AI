@@ -1,0 +1,34 @@
+[
+  {
+    "policy_id": "GLOB-001",
+    "name": "Global Public Access Baseline",
+    "description": "Permits basic read actions for public classification content.",
+    "effect": "Permit",
+    "priority": 10,
+    "roles": ["central_admin", "admin", "manager", "auditor", "viewer"],
+    "departments": null,
+    "resource": {
+      "classification": ["Public", "Internal"]
+    },
+    "actions": ["Read", "View Dashboard"],
+    "conditions": {
+      "max_risk_score": 60
+    },
+    "obligations": []
+  },
+  {
+    "policy_id": "GLOB-002",
+    "name": "Global High-Risk Deny",
+    "description": "Denies access to any request with extreme risk score (>80).",
+    "effect": "Deny",
+    "priority": 100,
+    "roles": null,
+    "departments": null,
+    "resource": null,
+    "actions": null,
+    "conditions": {
+      "min_risk_score": 80
+    },
+    "obligations": ["Log High Severity Event", "Expire Session Early"]
+  }
+]

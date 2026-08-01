@@ -1,0 +1,6 @@
+CLASSIFICATION: Internal
+
+This document summarises our updated data-handling procedure. All personal
+data is encrypted at rest and in transit. Access follows least-privilege and
+is reviewed quarterly. Personal data is retained for 24 months in line with
+the approved retention schedule, after which it is securely deleted.

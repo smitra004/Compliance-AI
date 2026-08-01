@@ -1,0 +1,14 @@
+Password Policy
+
+This document belongs to the Security department.
+
+Approval is required before implementation.
+The policy shall be reviewed every year.
+This report contains organization specific information.
+Internal use only.
+Version 2.1 of the document is currently active.
+This document has been reviewed by the department manager.
+The policy shall be reviewed every year.
+This document has been reviewed by the department manager.
+Management approval is mandatory.
+Management approval is mandatory.

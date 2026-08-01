@@ -1,0 +1,14 @@
+Security Audit
+
+This document belongs to the Security department.
+
+All employees must comply with this policy.
+Approval is required before implementation.
+Version 2.1 of the document is currently active.
+Management approval is mandatory.
+This report contains organization specific information.
+Confidential information must not be shared externally.
+Approval is required before implementation.
+Internal use only.
+Version 2.1 of the document is currently active.
+Internal use only.

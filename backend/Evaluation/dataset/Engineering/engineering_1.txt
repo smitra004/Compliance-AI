@@ -1,0 +1,14 @@
+Software Design Document
+
+This document belongs to the Engineering department.
+
+The policy shall be reviewed every year.
+Internal use only.
+Version 2.1 of the document is currently active.
+This report contains organization specific information.
+Confidential information must not be shared externally.
+Proper documentation must be maintained.
+Management approval is mandatory.
+Management approval is mandatory.
+Confidential information must not be shared externally.
+The policy shall be reviewed every year.

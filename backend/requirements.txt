@@ -1,0 +1,45 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pydantic==2.9.2
+email-validator==2.2.0
+chromadb==0.5.23
+pdfplumber==0.11.4
+pymupdf==1.24.10
+python-docx==1.1.2
+reportlab==4.4.4
+# Optional — only needed for the real LLM path:
+langchain-openai==0.2.2
+langchain==0.3.3
+
+# --- Added: technologies from the "impresses judges" list ---
+# Multi-agent orchestration
+langgraph==0.2.39
+
+# Azure OpenAI / Azure AI Search / Microsoft Purview
+azure-search-documents==11.5.1
+azure-identity==1.17.1
+httpx==0.27.2
+
+# PostgreSQL (optional — falls back to bundled SQLite when DATABASE_URL is unset)
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.9
+
+# Redis cache (optional — falls back to in-memory cache when REDIS_URL is unset)
+redis==5.0.8
+
+# JWT + RBAC (Keycloak / Auth0 OIDC, or local dev tokens)
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# Prometheus metrics (scraped by Prometheus, visualized in Grafana)
+prometheus-client==0.20.0
+prometheus-fastapi-instrumentator==7.0.0
+
+# WebSockets for real-time notifications
+websockets==13.1
+
+# Google OAuth authentication
+google-auth>=2.20.0
+

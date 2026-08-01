@@ -1,0 +1,37 @@
+{
+  "title": "ComplianceAI — Scan Pipeline",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Scans / min",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(rate(complianceai_scans_total[1m]))" }]
+    },
+    {
+      "type": "piechart",
+      "title": "Violations by severity",
+      "gridPos": { "h": 8, "w": 8, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum by (severity) (complianceai_violations_total)" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Scan duration (p95)",
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 0 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(complianceai_scan_duration_seconds_bucket[5m]))" }]
+    },
+    {
+      "type": "stat",
+      "title": "Remediations applied",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 6 },
+      "targets": [{ "expr": "sum(complianceai_remediations_total)" }]
+    },
+    {
+      "type": "stat",
+      "title": "Auth failures",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 12 },
+      "targets": [{ "expr": "sum(complianceai_auth_failures_total)" }]
+    }
+  ]
+}

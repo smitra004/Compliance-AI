@@ -1,0 +1,14 @@
+Deployment Guide
+
+This document belongs to the Engineering department.
+
+This report contains organization specific information.
+Version 2.1 of the document is currently active.
+Approval is required before implementation.
+Internal use only.
+Version 2.1 of the document is currently active.
+Internal use only.
+Confidential information must not be shared externally.
+All employees must comply with this policy.
+Version 2.1 of the document is currently active.
+This document has been reviewed by the department manager.

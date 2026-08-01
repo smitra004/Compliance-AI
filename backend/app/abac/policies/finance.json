@@ -1,0 +1,40 @@
+[
+  {
+    "policy_id": "FIN-001",
+    "name": "Finance Document Access & Upload",
+    "description": "Allows Finance managers and admins to view and upload Finance records during business hours over VPN.",
+    "effect": "Permit",
+    "priority": 50,
+    "roles": ["central_admin", "admin", "manager"],
+    "departments": ["Finance"],
+    "resource": {
+      "department": ["Finance"],
+      "classification": ["Internal", "Confidential", "Restricted"]
+    },
+    "actions": ["Read", "Upload", "Download", "Run AI Analysis"],
+    "conditions": {
+      "business_hours": true,
+      "vpn_required": true,
+      "mfa_required": true,
+      "max_risk_score": 60
+    },
+    "obligations": ["Mask Sensitive Fields"]
+  },
+  {
+    "policy_id": "FIN-002",
+    "name": "Finance Sensitive Payroll Masking",
+    "description": "Requires field-level masking for financial records when exported.",
+    "effect": "Permit",
+    "priority": 60,
+    "roles": ["manager", "auditor"],
+    "departments": ["Finance"],
+    "resource": {
+      "contains_financial_data": true
+    },
+    "actions": ["Export", "Generate Report"],
+    "conditions": {
+      "mfa_required": true
+    },
+    "obligations": ["Mask Sensitive Fields", "Watermark PDF"]
+  }
+]

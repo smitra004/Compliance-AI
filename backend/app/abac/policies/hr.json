@@ -1,0 +1,40 @@
+[
+  {
+    "policy_id": "HR-001",
+    "name": "HR Confidential Personnel File Access",
+    "description": "Restricts confidential HR documents to HR department personnel with confidential clearance.",
+    "effect": "Permit",
+    "priority": 50,
+    "roles": ["central_admin", "admin", "manager", "auditor"],
+    "departments": ["HR", "Executive"],
+    "resource": {
+      "department": ["HR"],
+      "classification": ["Confidential", "Highly Confidential", "Restricted"]
+    },
+    "actions": ["Read", "Download", "Export", "Print"],
+    "conditions": {
+      "min_clearance": "confidential",
+      "vpn_required": true,
+      "mfa_required": true,
+      "max_risk_score": 50
+    },
+    "obligations": ["Mask Sensitive Fields", "Disable Printing"]
+  },
+  {
+    "policy_id": "HR-002",
+    "name": "HR PII Protection Strict Obligation",
+    "description": "Enforces PII field masking whenever HR documents contain PII.",
+    "effect": "Permit",
+    "priority": 70,
+    "roles": ["central_admin", "admin", "manager", "auditor"],
+    "departments": ["HR"],
+    "resource": {
+      "contains_pii": true
+    },
+    "actions": ["Read", "View"],
+    "conditions": {
+      "max_risk_score": 60
+    },
+    "obligations": ["Mask Sensitive Fields"]
+  }
+]

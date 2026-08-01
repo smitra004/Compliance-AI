@@ -1,0 +1,14 @@
+Version Control Policy
+
+This document belongs to the Engineering department.
+
+Management approval is mandatory.
+Management approval is mandatory.
+Proper documentation must be maintained.
+Proper documentation must be maintained.
+Approval is required before implementation.
+This report contains organization specific information.
+This document has been reviewed by the department manager.
+The policy shall be reviewed every year.
+Confidential information must not be shared externally.
+This report contains organization specific information.

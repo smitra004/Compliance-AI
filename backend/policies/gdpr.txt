@@ -1,0 +1,18 @@
+# GDPR Compliance Policy Corpus
+# Each block: CLAUSE || regulation || severity_weight || text
+
+GDPR Art. 5 - Data Minimisation || gdpr || P2 || Personal data must be adequate, relevant and limited to what is necessary for the purposes for which it is processed. Collecting more personal data than required for the stated purpose is a violation.
+
+GDPR Art. 6 - Lawful Basis || gdpr || P1 || Processing of personal data is lawful only if a valid legal basis exists, such as consent, contract, or legitimate interest. Processing without a documented lawful basis is prohibited.
+
+GDPR Art. 9 - Special Category Data || gdpr || P1 || Processing of special categories of personal data (health, biometric, racial or ethnic origin, religious belief) is prohibited unless an explicit exemption and additional safeguards apply.
+
+GDPR Art. 17 - Right to Erasure || gdpr || P2 || Data subjects have the right to obtain erasure of personal data without undue delay. Retention beyond the necessary period without legal justification violates this right.
+
+GDPR Art. 28 - Processor Obligations || gdpr || P2 || Where processing is carried out by a processor, a binding contract must govern the processing and the processor must provide sufficient guarantees of appropriate technical and organisational measures.
+
+GDPR Art. 32 - Security of Processing || gdpr || P1 || Controllers and processors must implement appropriate technical measures including encryption of personal data. Storing or transmitting personal data such as email, phone, or identifiers without encryption is a violation.
+
+GDPR Art. 33 - Breach Notification || gdpr || P1 || A personal data breach must be reported to the supervisory authority within 72 hours of becoming aware of it. Delayed or absent breach notification is a violation.
+
+GDPR Art. 44 - International Transfers || gdpr || P1 || Transfers of personal data to a third country are only permitted where adequate safeguards or an adequacy decision are in place. Sending EU personal data to a jurisdiction without safeguards is prohibited.

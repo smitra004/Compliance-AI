@@ -1,0 +1,96 @@
+# Full stack: app + the infra pieces from the "impresses judges" list.
+# `docker compose up --build` still works with zero configuration — Postgres,
+# Redis, Keycloak, Prometheus and Grafana all come up, but the backend keeps
+# working (SQLite + in-memory cache + header-based RBAC) even if you delete
+# any of those services, per the project's existing demo-mode philosophy.
+services:
+  backend:
+    build: ./backend
+    ports: ["8010:8000"]  # host:container — 8010 used on host to avoid Windows WinError 10013 on port 8000
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY:-}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_SEARCH_ENDPOINT=${AZURE_SEARCH_ENDPOINT:-}
+      - AZURE_SEARCH_KEY=${AZURE_SEARCH_KEY:-}
+      - PURVIEW_ACCOUNT_NAME=${PURVIEW_ACCOUNT_NAME:-}
+      - PURVIEW_TENANT_ID=${PURVIEW_TENANT_ID:-}
+      - PURVIEW_CLIENT_ID=${PURVIEW_CLIENT_ID:-}
+      - PURVIEW_CLIENT_SECRET=${PURVIEW_CLIENT_SECRET:-}
+      - DATABASE_URL=postgresql+psycopg2://complianceai:complianceai@postgres:5432/complianceai
+      - REDIS_URL=redis://redis:6379/0
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_AUDIENCE=${OIDC_AUDIENCE:-}
+      - JWT_SECRET=${JWT_SECRET:-dev-only-insecure-secret-change-me}
+      - ORCHESTRATOR_ENGINE=${ORCHESTRATOR_ENGINE:-native}
+    depends_on: [postgres, redis]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build: ./frontend
+    ports: ["5173:5173"]
+    environment:
+      - VITE_API_BASE=http://localhost:8010/api
+      - VITE_WS_BASE=ws://localhost:8010/ws
+    depends_on: [backend]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=complianceai
+      - POSTGRES_PASSWORD=complianceai
+      - POSTGRES_DB=complianceai
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U complianceai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: start-dev
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=dev-file
+    ports: ["8080:8080"]
+    profiles: ["auth"]   # `docker compose --profile auth up` to include it
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [backend]
+    profiles: ["observability"]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports: ["3000:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [prometheus]
+    profiles: ["observability"]
+
+volumes:
+  pgdata:

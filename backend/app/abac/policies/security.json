@@ -1,0 +1,39 @@
+[
+  {
+    "policy_id": "SEC-001",
+    "name": "Security Audit & Policy Management",
+    "description": "Permits Security department admins to manage system policies and audit logs.",
+    "effect": "Permit",
+    "priority": 80,
+    "roles": ["central_admin", "admin"],
+    "departments": ["Security", "IT", "Global"],
+    "resource": {
+      "department": ["Security", "IT", "General"]
+    },
+    "actions": ["Manage Policies", "Manage Users", "View Audit Logs", "Assign Roles", "Modify Classification"],
+    "conditions": {
+      "min_clearance": "confidential",
+      "vpn_required": true,
+      "mfa_required": true,
+      "max_risk_score": 50
+    },
+    "obligations": ["Log High Severity Event"]
+  },
+  {
+    "policy_id": "SEC-002",
+    "name": "Security Critical Document Threat Lock",
+    "description": "Denies export/deletion of Restricted/Top Secret security findings unless requested from corporate network.",
+    "effect": "Deny",
+    "priority": 90,
+    "roles": null,
+    "departments": null,
+    "resource": {
+      "classification": ["Restricted", "Top Secret"]
+    },
+    "actions": ["Delete", "Export"],
+    "conditions": {
+      "vpn_required": true
+    },
+    "obligations": ["Log High Severity Event", "Require MFA"]
+  }
+]
