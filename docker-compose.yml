@@ -33,10 +33,7 @@ services:
 
   frontend:
     build: ./frontend
-    ports: ["5173:5173"]
-    environment:
-      - VITE_API_BASE=http://localhost:8010/api
-      - VITE_WS_BASE=ws://localhost:8010/ws
+    ports: ["80:80"]
     depends_on: [backend]
 
   postgres:
