@@ -46,6 +46,63 @@ const DEFAULT_CAP = {
   textFaint: "#8C8278",
 };
 
+// ─── GOVERNANCE POLICY MATRICES ─────────────────────────────────────────────
+// Source of truth: "Table 1: Statutory Regulation Authorizations" and
+// "Table 2: Feature Access" governance tables. Role keys mirror the backend
+// ROLE_PERMISSIONS dict in app/rbac.py — "admin" here means "Departmental
+// Admin" (scoped to own department) and "central_admin" means the table's
+// "Admin" row (global/unscoped).
+//
+// Regulation access levels: "full" | "own_dept" | "read_only" | "none"
+const ROLE_REGULATION_MATRIX = {
+  central_admin: { GDPR: "full", SOX: "full", ISO27001: "full", HIPAA: "full", INTERNALSECURITY: "full", INTERNALHR: "full" },
+  admin: { GDPR: "full", SOX: "full", ISO27001: "full", HIPAA: "full", INTERNALSECURITY: "full", INTERNALHR: "full" },
+  manager: { GDPR: "none", SOX: "full", ISO27001: "full", HIPAA: "none", INTERNALSECURITY: "full", INTERNALHR: "full" },
+  auditor: { GDPR: "read_only", SOX: "read_only", ISO27001: "read_only", HIPAA: "read_only", INTERNALSECURITY: "read_only", INTERNALHR: "read_only" },
+  viewer: { GDPR: "none", SOX: "none", ISO27001: "none", HIPAA: "none", INTERNALSECURITY: "none", INTERNALHR: "none" },
+};
+
+// Permission access levels: true | false | "own_dept" | "limited" | "read_only"
+const ROLE_PERMISSION_MATRIX = {
+  central_admin: { can_view_reports: true, can_download: true, can_export: true, can_delete: true, can_view_pii: true, can_view_financial: true },
+  admin: { can_view_reports: true, can_download: true, can_export: true, can_delete: true, can_view_pii: true, can_view_financial: true },
+  manager: { can_view_reports: "own_dept", can_download: true, can_export: "own_dept", can_delete: false, can_view_pii: "limited", can_view_financial: "limited" },
+  auditor: { can_view_reports: "own_dept", can_download: true, can_export: "own_dept", can_delete: false, can_view_pii: "read_only", can_view_financial: "read_only" },
+  viewer: { can_view_reports: "read_only", can_download: false, can_export: false, can_delete: false, can_view_pii: false, can_view_financial: false },
+};
+
+function normalizeRoleKey(role) {
+  const r = (role || "").toLowerCase().trim();
+  if (r === "central_admin" || r === "central admin") return "central_admin";
+  if (r === "admin" || r === "department admin" || r === "departmental admin" || r === "department_admin" || r === "departmental_admin") return "admin";
+  if (r === "manager") return "manager";
+  if (r === "auditor") return "auditor";
+  if (r === "viewer") return "viewer";
+  return null;
+}
+
+function normalizeRegKey(name) {
+  return (name || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function getRegAccessLevel(role, regName) {
+  const roleKey = normalizeRoleKey(role);
+  if (!roleKey) return "full";
+  const table = ROLE_REGULATION_MATRIX[roleKey] || {};
+  return table[normalizeRegKey(regName)] ?? "none";
+}
+
+function getPermAccessLevel(role, permKey) {
+  const roleKey = normalizeRoleKey(role);
+  if (!roleKey) return true;
+  const table = ROLE_PERMISSION_MATRIX[roleKey] || {};
+  const level = table[permKey];
+  return level === undefined ? false : level;
+}
+
+const REG_ACCESS_LABEL = { full: "Full", own_dept: "Own Dept", read_only: "Read Only", none: "Not Permitted" };
+const PERM_ACCESS_LABEL = { true: "Full", own_dept: "Own Dept", limited: "Limited", read_only: "Read Only", false: "Not Permitted" };
+
 export default function EnterpriseEmployeeAccessManagement({ token, CAP: incomingCAP }) {
   const CAP = incomingCAP || DEFAULT_CAP;
 
@@ -98,7 +155,7 @@ export default function EnterpriseEmployeeAccessManagement({ token, CAP: incomin
     setRegulations(regRes || []);
 
     if (empRes && empRes.length > 0) {
-      selectEmployee(empRes[0]);
+      selectEmployee(empRes[0], regRes || []);
     }
   } catch (err) {
     console.error("Failed to load initial ABAC data:", err);
@@ -114,12 +171,32 @@ const showToast = (msg, isError = false) => {
   setTimeout(() => setToastMessage(""), 5000);
 };
 
-const selectEmployee = (emp) => {
+const selectEmployee = (emp, regsOverride) => {
   setSelectedEmpId(emp.id);
   setCurrentEmp(emp);
   setClearanceLevelId(emp.clearance_level_id || 2);
-  setSelectedRegIds(emp.allowed_regulation_ids || []);
-  setPermissions(
+
+  // Clamp stored regulations/permissions down to whatever the employee's
+  // role is actually authorized for per the governance matrix — a role
+  // change (or stale data) should never leave disallowed grants active.
+  // Central Admin and Departmental Admin get every checkbox authorized
+  // outright; other roles keep their stored selections, filtered down to
+  // what their role permits.
+  const regList = regsOverride || regulations;
+  const roleKey = normalizeRoleKey(emp.role);
+  const isFullAccessRole = roleKey === "central_admin" || roleKey === "admin";
+
+  const rawRegIds = emp.allowed_regulation_ids || [];
+  const clampedRegIds = isFullAccessRole
+    ? regList.map((r) => r.id)
+    : rawRegIds.filter((id) => {
+        const reg = regList.find((r) => r.id === id);
+        if (!reg) return true; // not loaded yet, don't drop
+        return getRegAccessLevel(emp.role, reg.regulation_name) !== "none";
+      });
+  setSelectedRegIds(clampedRegIds);
+
+  const rawPermissions =
     emp.permissions || {
       can_view_reports: true,
       can_download: false,
@@ -127,8 +204,17 @@ const selectEmployee = (emp) => {
       can_delete: false,
       can_view_pii: false,
       can_view_financial: false,
+    };
+  const clampedPermissions = {};
+  Object.keys(rawPermissions).forEach((key) => {
+    if (isFullAccessRole) {
+      clampedPermissions[key] = true;
+      return;
     }
-  );
+    const level = getPermAccessLevel(emp.role, key);
+    clampedPermissions[key] = level === false ? false : !!rawPermissions[key];
+  });
+  setPermissions(clampedPermissions);
 };
 
 const handleEmployeeChange = (e) => {
@@ -140,7 +226,11 @@ const handleEmployeeChange = (e) => {
 };
 
 const toggleRegulation = (regId) => {
-  if (!isEditable) return;
+  if (!isEditable || !currentEmp) return;
+
+  const reg = regulations.find((r) => r.id === regId);
+  const accessLevel = reg ? getRegAccessLevel(currentEmp.role, reg.regulation_name) : "none";
+  if (accessLevel === "none") return; // role is not authorized for this regulation at all
 
   if (selectedRegIds.includes(regId)) {
     setSelectedRegIds(selectedRegIds.filter((id) => id !== regId));
@@ -150,7 +240,10 @@ const toggleRegulation = (regId) => {
 };
 
 const togglePermission = (key) => {
-  if (!isEditable) return;
+  if (!isEditable || !currentEmp) return;
+
+  const accessLevel = getPermAccessLevel(currentEmp.role, key);
+  if (accessLevel === false) return; // role's governance policy blocks this permission outright
 
   setPermissions((prev) => ({
     ...prev,
@@ -207,12 +300,9 @@ const handleSave = async () => {
     const targetRole = (currentEmp.role || "").toLowerCase();
 
     if (loggedRole === "central_admin") {
-      if (["central_admin", "admin"].includes(targetRole) && loggedUser.email !== currentEmp.email) {
-        isEditable = false;
-        editRestrictionReason = "Central Admin safeguards: You cannot modify attributes for other Central Admins.";
-      } else {
-        isEditable = true;
-      }
+      // Central Admin sits at the top of the hierarchy and can manage every
+      // employee, including other Central Admins / Departmental Admins.
+      isEditable = true;
     } else if (loggedRole === "admin" || loggedRole === "manager" || loggedRole === "department admin") {
       if (loggedDept && targetDept && loggedDept.toLowerCase() !== targetDept.toLowerCase()) {
         isEditable = false;
@@ -662,37 +752,7 @@ const handleSave = async () => {
             )}
 
             {/* SECTION A: Clearance Level */}
-            <div style={{ marginBottom: 28 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: CAP.text, display: "block", marginBottom: 8 }}>
-                SECURITY CLEARANCE LEVEL TIER
-              </label>
-              <div style={{ fontSize: 12, color: CAP.textFaint, marginBottom: 12 }}>
-                Determines hierarchical document classification access (Rank 1 = Public, Rank 4 = Restricted / Secret).
-              </div>
-              <select
-                value={clearanceLevelId}
-                onChange={(e) => setClearanceLevelId(e.target.value)}
-                disabled={!isEditable}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  borderRadius: 14,
-                  border: `1px solid ${isEditable ? CAP.purple + "60" : CAP.border}`,
-                  backgroundColor: isEditable ? "#FFFFFF" : "rgba(20, 33, 61, 0.03)",
-                  color: CAP.purpleDark,
-                  fontSize: 14.5,
-                  fontWeight: 700,
-                  cursor: isEditable ? "pointer" : "not-allowed",
-                  outline: "none",
-                }}
-              >
-                {clearanceLevels.map((lvl) => (
-                  <option key={lvl.id} value={lvl.id}>
-                    Tier {lvl.rank}: {lvl.clearance_name} (Rank {lvl.rank})
-                  </option>
-                ))}
-              </select>
-            </div>
+            
 
             {/* SECTION B: Allowed Regulations */}
             <div style={{ marginBottom: 28 }}>
@@ -705,24 +765,30 @@ const handleSave = async () => {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10 }}>
                 {regulations.map((reg) => {
                   const isChecked = selectedRegIds.includes(reg.id);
+                  const accessLevel = currentEmp ? getRegAccessLevel(currentEmp.role, reg.regulation_name) : "full";
+                  const isBlocked = accessLevel === "none";
+                  const clickable = isEditable && !isBlocked;
                   return (
                     <div
                       key={reg.id}
                       onClick={() => toggleRegulation(reg.id)}
+                      title={isBlocked ? `Not permitted for role '${currentEmp?.role}' per governance policy` : REG_ACCESS_LABEL[accessLevel]}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
                         padding: "11px 14px",
-                        backgroundColor: isChecked ? "rgba(201, 169, 110, 0.10)" : "#FFFFFF",
-                        border: `1px solid ${isChecked ? CAP.purple : CAP.border}`,
+                        backgroundColor: isBlocked ? "rgba(20, 33, 61, 0.03)" : isChecked ? "rgba(201, 169, 110, 0.10)" : "#FFFFFF",
+                        border: `1px solid ${isBlocked ? CAP.border : isChecked ? CAP.purple : CAP.border}`,
                         borderRadius: 12,
-                        cursor: isEditable ? "pointer" : "not-allowed",
-                        color: isChecked ? CAP.purpleDark : CAP.textDim,
+                        cursor: clickable ? "pointer" : "not-allowed",
+                        color: isBlocked ? CAP.textFaint : isChecked ? CAP.purpleDark : CAP.textDim,
                         fontSize: 13,
                         fontWeight: isChecked ? 700 : 500,
                         userSelect: "none",
                         transition: "all 0.2s ease",
+                        opacity: isBlocked ? 0.55 : 1,
+                        position: "relative",
                       }}
                     >
                       <div
@@ -730,21 +796,47 @@ const handleSave = async () => {
                           width: 18,
                           height: 18,
                           borderRadius: 6,
-                          border: `1.5px solid ${isChecked ? CAP.purple : CAP.textFaint}`,
-                          background: isChecked ? CAP.purple : "transparent",
+                          border: `1.5px solid ${isBlocked ? CAP.textFaint : isChecked ? CAP.purple : CAP.textFaint}`,
+                          background: isChecked && !isBlocked ? CAP.purple : "transparent",
                           display: "grid",
                           placeItems: "center",
                           color: "#fff",
                           flexShrink: 0,
                         }}
                       >
-                        {isChecked && <Check size={12} strokeWidth={3} />}
+                        {isBlocked ? (
+                          <Lock size={10} color={CAP.textFaint} />
+                        ) : (
+                          isChecked && <Check size={12} strokeWidth={3} />
+                        )}
                       </div>
-                      <span>{reg.regulation_name}</span>
+                      <span style={{ flex: 1, minWidth: 0 }}>{reg.regulation_name}</span>
+                      {!isBlocked && accessLevel !== "full" && (
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 800,
+                            letterSpacing: "0.04em",
+                            color: CAP.cyan,
+                            background: CAP.cyanGlow,
+                            padding: "2px 6px",
+                            borderRadius: 99,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {REG_ACCESS_LABEL[accessLevel].toUpperCase()}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </div>
+              {currentEmp && (
+                <div style={{ fontSize: 11, color: CAP.textFaint, marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                  <ShieldCheck size={12} color={CAP.textFaint} />
+                  Governed by role &quot;{currentEmp.role}&quot; per the Statutory Regulation Authorizations policy. Greyed-out, locked entries are not permitted for this role.
+                </div>
+              )}
             </div>
 
             {/* SECTION C: Fine-Grained Permissions */}
@@ -760,18 +852,24 @@ const handleSave = async () => {
                 {PERMISSION_CONFIGS.map((item) => {
                   const Icon = item.icon;
                   const isOn = permissions[item.key];
+                  const accessLevel = currentEmp ? getPermAccessLevel(currentEmp.role, item.key) : true;
+                  const isBlocked = accessLevel === false;
+                  const canToggle = isEditable && !isBlocked;
+                  const badgeText = !isBlocked && accessLevel !== true ? PERM_ACCESS_LABEL[accessLevel] : null;
                   return (
                     <div
                       key={item.key}
+                      title={isBlocked ? `Not permitted for role '${currentEmp?.role}' per governance policy` : undefined}
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                         padding: "12px 14px",
-                        backgroundColor: isOn ? "rgba(90, 122, 106, 0.05)" : "rgba(20, 33, 61, 0.02)",
+                        backgroundColor: isBlocked ? "rgba(20, 33, 61, 0.03)" : isOn ? "rgba(90, 122, 106, 0.05)" : "rgba(20, 33, 61, 0.02)",
                         borderRadius: 14,
-                        border: `1px solid ${isOn ? CAP.green + "35" : CAP.border}`,
+                        border: `1px solid ${isBlocked ? CAP.border : isOn ? CAP.green + "35" : CAP.border}`,
                         transition: "all 0.2s ease",
+                        opacity: isBlocked ? 0.55 : 1,
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
@@ -780,52 +878,86 @@ const handleSave = async () => {
                             width: 32,
                             height: 32,
                             borderRadius: 10,
-                            background: isOn ? "rgba(90, 122, 106, 0.12)" : "rgba(20, 33, 61, 0.04)",
+                            background: isOn && !isBlocked ? "rgba(90, 122, 106, 0.12)" : "rgba(20, 33, 61, 0.04)",
                             display: "grid",
                             placeItems: "center",
-                            color: isOn ? CAP.green : CAP.textFaint,
+                            color: isOn && !isBlocked ? CAP.green : CAP.textFaint,
                             flexShrink: 0,
                           }}
                         >
-                          <Icon size={16} />
+                          {isBlocked ? <Lock size={14} /> : <Icon size={16} />}
                         </div>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12.5, fontWeight: 700, color: CAP.text }}>{item.label}</div>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: CAP.text, display: "flex", alignItems: "center", gap: 6 }}>
+                            {item.label}
+                            {badgeText && (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 800,
+                                  letterSpacing: "0.04em",
+                                  color: CAP.cyan,
+                                  background: CAP.cyanGlow,
+                                  padding: "2px 6px",
+                                  borderRadius: 99,
+                                }}
+                              >
+                                {badgeText.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
                           <div style={{ fontSize: 10.5, color: CAP.textFaint, textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                            {item.desc}
+                            {isBlocked ? `Blocked by governance policy for '${currentEmp?.role}'` : item.desc}
                           </div>
                         </div>
                       </div>
 
                       <button
                         type="button"
-                        disabled={!isEditable}
+                        disabled={!canToggle}
                         onClick={() => togglePermission(item.key)}
                         style={{
                           padding: "6px 14px",
                           borderRadius: 99,
                           border: "none",
-                          backgroundColor: isOn
+                          backgroundColor: isOn && !isBlocked
                             ? `linear-gradient(135deg, ${CAP.green}, #22c55e)`
                             : "rgba(20, 33, 61, 0.10)",
-                          background: isOn ? CAP.green : "rgba(22, 18, 14, 0.12)",
-                          color: isOn ? "#FFFFFF" : CAP.textFaint,
+                          background: isBlocked ? "rgba(22, 18, 14, 0.08)" : isOn ? CAP.green : "rgba(22, 18, 14, 0.12)",
+                          color: isOn && !isBlocked ? "#FFFFFF" : CAP.textFaint,
                           fontSize: 11.5,
                           fontWeight: 800,
                           letterSpacing: "0.04em",
-                          cursor: isEditable ? "pointer" : "not-allowed",
+                          cursor: canToggle ? "pointer" : "not-allowed",
                           transition: "all 0.2s ease",
                           flexShrink: 0,
                           marginLeft: 8,
-                          boxShadow: isOn ? `0 0 12px ${CAP.green}30` : "none",
+                          boxShadow: isOn && !isBlocked ? `0 0 12px ${CAP.green}30` : "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
                         }}
                       >
-                        {isOn ? "ENABLED" : "OFF"}
+                        {isBlocked ? (
+                          <>
+                            <Lock size={10} /> LOCKED
+                          </>
+                        ) : isOn ? (
+                          "ENABLED"
+                        ) : (
+                          "OFF"
+                        )}
                       </button>
                     </div>
                   );
                 })}
               </div>
+              {currentEmp && (
+                <div style={{ fontSize: 11, color: CAP.textFaint, marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                  <ShieldCheck size={12} color={CAP.textFaint} />
+                  Governed by role &quot;{currentEmp.role}&quot; per the Feature Access policy. Locked toggles cannot be enabled for this role.
+                </div>
+              )}
             </div>
           </div>
 
